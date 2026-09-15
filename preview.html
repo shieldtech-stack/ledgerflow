@@ -25,6 +25,7 @@
     @keyframes modalIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
   </style>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     tailwind.config = {
       darkMode: "class",
@@ -291,9 +292,9 @@
           <span>Send via WhatsApp</span>
         </button>
         <div class="grid grid-cols-2 gap-space-xs">
-          <button onclick="doPrint()" class="h-11 rounded-xl bg-surface-container text-on-surface font-body-lg text-body-lg font-medium flex items-center justify-center gap-space-xs hover:bg-surface-container-high active:scale-[0.98] transition-all" type="button">
-            <span class="material-symbols-outlined text-[18px] text-primary">download</span>
-            <span>Download PDF</span>
+<button onclick="downloadPdf()" class="h-11 rounded-xl bg-surface-container text-on-surface font-body-lg text-body-lg font-medium flex items-center justify-center gap-space-xs hover:bg-surface-container-high active:scale-[0.98] transition-all" type="button">
+          <span class="material-symbols-outlined text-[18px] text-primary">download</span>
+          <span>Download PDF</span>
           </button>
           <button onclick="copyShareLink()" class="h-11 rounded-xl bg-surface-container text-on-surface font-body-lg text-body-lg font-medium flex items-center justify-center gap-space-xs hover:bg-surface-container-high active:scale-[0.98] transition-all" type="button">
             <span class="material-symbols-outlined text-[18px] text-primary">link</span>
@@ -592,7 +593,209 @@
         }
       };
 
-      window.doPrint = function() { showToast('Sending document to printer...'); };
+      window.doPrint = function() {
+        try { window.print(); } catch(e) { showToast('Print not available on this device'); }
+      };
+
+      window.downloadPdf = function() {
+        if (!window.jspdf) { showToast('PDF engine is still loading \u2014 try again'); return; }
+        try {
+          var doc = new jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+          var W = doc.internal.pageSize.getWidth();
+          var H = doc.internal.pageSize.getHeight();
+          var margin = 14;
+          var contentW = W - margin * 2;
+
+          var accent = settings.accent || '#006C49';
+          var dark = '#131A33';
+          var gray = '#545D7C';
+          var green = accent;
+          var light = '#EEF2F7';
+
+          doc.setFillColor(accent);
+          doc.rect(0, 0, W, 3.2, 'F');
+
+          var bizName = companyName;
+          var taglineText = tagline || '';
+          doc.setTextColor(dark);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(15);
+          doc.text(bizName, margin, 18);
+          if (taglineText) {
+            doc.setFontSize(7.5);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(accent);
+            doc.text(taglineText.toUpperCase(), margin, 23);
+          }
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(22);
+          doc.setTextColor(dark);
+          doc.text(draft.mode === 'receipt' ? 'RECEIPT' : 'INVOICE', W - margin, 18, { align: 'right' });
+          doc.setFontSize(9);
+          doc.setTextColor(green);
+          doc.text('#' + invNumber, W - margin, 24, { align: 'right' });
+
+          var y = 30;
+          var dateBoxH = 13;
+          doc.setFillColor(light);
+          doc.roundedRect(margin, y, contentW, dateBoxH, 2, 2, 'F');
+          var colW = contentW / 2;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(6.5);
+          doc.setTextColor(gray);
+          doc.text('ISSUE DATE', margin + 4, y + 5);
+          doc.text('PAYMENT TERMS', margin + colW + 4, y + 5);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.setTextColor(dark);
+          doc.text(fmtDate(draft.issueDate), margin + 4, y + 9.5);
+          doc.text(terms === 0 ? 'Due on Receipt' : 'Net ' + terms, margin + colW + 4, y + 9.5);
+          y += dateBoxH + 7;
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(8);
+          doc.setTextColor('#3c4a42');
+          doc.text('BILLED TO', margin, y);
+          doc.setTextColor(accent);
+          doc.text('ISSUED BY', margin + colW, y);
+          y += 5;
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(11);
+          doc.setTextColor(dark);
+          doc.text(draft.clientName || '\u2014', margin, y);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8.5);
+          doc.setTextColor(gray);
+          if (draft.clientEmail) { y += 5; doc.text(draft.clientEmail, margin, y); }
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(11);
+          doc.setTextColor(dark);
+          doc.text(ownerName || bizName, margin + colW, y);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(8.5);
+          doc.setTextColor(gray);
+          var issuedLines = [];
+          if (bizName !== ownerName) issuedLines.push(bizName);
+          if (profAddress) issuedLines.push(profAddress);
+          if (profEmail) issuedLines.push(profEmail);
+          issuedLines.forEach(function(line) {
+            y += 5;
+            doc.text(line, margin + colW, y);
+          });
+          y += 8;
+
+          if (li.length > 0) {
+            var headerY = y;
+            doc.setFillColor('#E6EAF2');
+            doc.roundedRect(margin, y - 4, contentW, 9, 1.5, 1.5, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7);
+            doc.setTextColor(gray);
+            doc.text('DESCRIPTION', margin + 4, y);
+            doc.text('TOTAL', W - margin - 4, y, { align: 'right' });
+            y += 10;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(dark);
+            li.forEach(function(item) {
+              if (y > H - 60) { doc.addPage(); y = margin + 10; }
+              var amt = (item.qty || 0) * (item.rate || 0);
+              doc.text((item.description || '\u2014').substring(0, 80), margin + 2, y);
+              doc.text(fmt(amt), W - margin - 2, y, { align: 'right' });
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(7.5);
+              doc.setTextColor(gray);
+              var detail = ((item.qty || 0) + ' ' + (item.unit || 'service') + ' \u00D7 ' + fmt(item.rate || 0));
+              if (item.detail) detail = item.detail + ' \u2014 ' + detail;
+              doc.text(detail.substring(0, 90), margin + 2, y + 4);
+              y += 11;
+              doc.setFont('helvetica', 'normal');
+              doc.setFontSize(9.5);
+              doc.setTextColor(dark);
+            });
+            y += 4;
+          }
+
+          doc.setDrawColor('#D4DAE4');
+          doc.line(margin, y, W - margin, y);
+          y += 6;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(gray);
+          doc.text('Subtotal', W - margin - 45, y);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(dark);
+          doc.text(fmt(subtotal), W - margin, y, { align: 'right' });
+          if ((draft.discountRate || 0) > 0) {
+            y += 6;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(gray);
+            doc.text('Discount (' + (draft.discountRate || 0) + '%)', W - margin - 45, y);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(green);
+            doc.text('-' + fmt(discount), W - margin, y, { align: 'right' });
+          }
+          if ((draft.taxRate || 0) > 0) {
+            y += 6;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9);
+            doc.setTextColor(gray);
+            doc.text('Tax (' + (draft.taxRate || 0) + '%)', W - margin - 45, y);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(dark);
+            doc.text('+' + fmt(tax), W - margin, y, { align: 'right' });
+          }
+          y += 8;
+          doc.setFillColor(accent);
+          doc.roundedRect(W - margin - 74, y - 5, 74, 15, 2, 2, 'F');
+          doc.setTextColor('#ffffff');
+          doc.setFontSize(6);
+          doc.text('TOTAL DUE', W - margin - 66, y - 1);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(12);
+          doc.text(fmt(total), W - margin - 6, y + 6, { align: 'right' });
+          y += 18;
+
+          if (draft.note) {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(7.5);
+            doc.setTextColor(dark);
+            doc.text('NOTES', margin, y);
+            y += 5;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(gray);
+            var words = draft.note.split(' ');
+            var lineStr = '';
+            words.forEach(function(w) {
+              var test = lineStr ? lineStr + ' ' + w : w;
+              if (doc.getTextWidth(test) > contentW) {
+                doc.text(lineStr, margin, y);
+                lineStr = w;
+                y += 4.5;
+                if (y > H - 30) { doc.addPage(); y = margin + 10; }
+              } else {
+                lineStr = test;
+              }
+            });
+            if (lineStr) doc.text(lineStr, margin, y);
+          }
+
+          var footerText = 'Created with LedgerFlow \u2022 ' + (draft.id || '');
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(gray);
+          doc.text(footerText, W / 2, H - 10, { align: 'center' });
+
+          doc.save('LedgerFlow_' + (draft.id || 'invoice').replace(/[^\w\-]+/g, '_') + '.pdf');
+          showToast('PDF downloaded');
+        } catch(e) {
+          showToast('Could not generate PDF');
+        }
+      };
 
       // M-Pesa
       window.openMpesa = function() {

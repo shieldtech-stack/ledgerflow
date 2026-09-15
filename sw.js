@@ -1,4 +1,4 @@
-var CACHE_NAME = 'ledgerflow-v1';
+var CACHE_NAME = 'ledgerflow-v2';
 
 var STATIC_ASSETS = [
   './',
@@ -10,6 +10,7 @@ var STATIC_ASSETS = [
   './icon-192.png',
   './icon-512.png',
   'https://cdn.tailwindcss.com',
+  'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&display=swap',
   'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap'
 ];
@@ -87,6 +88,11 @@ self.addEventListener('fetch', function(event) {
   }
 
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    event.respondWith(cacheFirst(event.request));
+    return;
+  }
+
+  if (url.hostname === 'cdnjs.cloudflare.com') {
     event.respondWith(cacheFirst(event.request));
     return;
   }
