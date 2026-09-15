@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+  <title>LedgerFlow — Live Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300..900;1,300..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+  <link rel="manifest" href="manifest.json"/>
+  <link rel="icon" type="image/png" href="icon-192.png"/>
+  <meta name="theme-color" content="#006c49"/>
+  <style>
+    html, body { width: 100vw; margin: 0; padding: 0; }
+    body { overscroll-behavior: none; }
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+    .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+    main > :first-child { margin-top: 0 !important; }
+    main > :last-child { margin-bottom: 0 !important; }
+    ::-webkit-scrollbar { display: none; }
+    .toast-anim { animation: toastIn 0.3s ease-out; }
+    @keyframes toastIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-anim { animation: modalIn 0.25s ease-out; }
+    @keyframes modalIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "inverse-surface": "#282f49", "surface-dim": "#d2d9fa", "primary": "#006c49",
+            "on-primary": "#ffffff", "secondary-fixed": "#dbe1ff", "on-surface": "#131a33",
+            "on-secondary": "#ffffff", "primary-fixed": "#6ffbbe", "tertiary-fixed-dim": "#68dba9",
+            "on-primary-fixed": "#002113", "on-secondary-fixed": "#111a36",
+            "outline-variant": "#bbcabf", "outline": "#6c7a71",
+            "surface-container-highest": "#dbe1ff", "on-error": "#ffffff",
+            "on-error-container": "#93000a", "inverse-primary": "#4edea3",
+            "on-background": "#131a33", "error": "#ba1a1a", "primary-container": "#10b981",
+            "tertiary": "#006c4a", "tertiary-container": "#3eb686", "on-tertiary": "#ffffff",
+            "surface": "#faf8ff", "secondary": "#545d7c", "on-tertiary-container": "#00422c",
+            "on-primary-container": "#00422b", "on-secondary-fixed-variant": "#3d4664",
+            "surface-container-high": "#e3e7ff", "error-container": "#ffdad6",
+            "on-surface-variant": "#3c4a42", "primary-fixed-dim": "#4edea3",
+            "on-tertiary-fixed-variant": "#005137", "surface-tint": "#006c49",
+            "tertiary-fixed": "#85f8c4", "secondary-container": "#d0d9fd",
+            "on-tertiary-fixed": "#002114", "surface-container": "#ebedff",
+            "surface-container-lowest": "#ffffff", "on-secondary-container": "#555e7d",
+            "on-primary-fixed-variant": "#005236", "inverse-on-surface": "#eff0ff",
+            "surface-bright": "#faf8ff", "surface-variant": "#dbe1ff", "background": "#faf8ff"
+          },
+          fontFamily: {
+            "display-lg": ["'Hanken Grotesk'", "sans-serif"], "headline-lg": ["'Hanken Grotesk'", "sans-serif"],
+            "headline-md": ["'Hanken Grotesk'", "sans-serif"], "headline-sm": ["'Hanken Grotesk'", "sans-serif"],
+            "body-lg": ["'Hanken Grotesk'", "sans-serif"], "body-md": ["'Hanken Grotesk'", "sans-serif"],
+            "body-sm": ["'Hanken Grotesk'", "sans-serif"],
+            "label-numeric-lg": ["'JetBrains Mono'", "monospace"], "label-numeric-md": ["'JetBrains Mono'", "monospace"],
+            "label-numeric-sm": ["'JetBrains Mono'", "monospace"], "label-caps": ["'Hanken Grotesk'", "sans-serif"]
+          },
+          fontSize: {
+            "display-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.03em", fontWeight: "700" }],
+            "headline-lg": ["26px", { lineHeight: "32px", letterSpacing: "-0.02em", fontWeight: "700" }],
+            "headline-md": ["20px", { lineHeight: "26px", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "headline-sm": ["17px", { lineHeight: "22px", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "body-lg": ["16px", { lineHeight: "24px", letterSpacing: "0em", fontWeight: "400" }],
+            "body-md": ["14px", { lineHeight: "20px", letterSpacing: "0em", fontWeight: "400" }],
+            "body-sm": ["13px", { lineHeight: "18px", letterSpacing: "0.01em", fontWeight: "400" }],
+            "label-numeric-lg": ["22px", { lineHeight: "28px", letterSpacing: "-0.02em", fontWeight: "600" }],
+            "label-numeric-md": ["15px", { lineHeight: "20px", letterSpacing: "-0.01em", fontWeight: "500" }],
+            "label-numeric-sm": ["12px", { lineHeight: "16px", letterSpacing: "0em", fontWeight: "500" }],
+            "label-caps": ["11px", { lineHeight: "14px", letterSpacing: "0.06em", fontWeight: "700" }]
+          },
+          spacing: {
+            "gutter": "1rem", "gutter-sm": "0.75rem", "margin": "1rem", "margin-sm": "0.75rem",
+            "margin-lg": "1.25rem", "space-xs": "0.25rem", "space-sm": "0.5rem", "space-md": "0.75rem",
+            "space-lg": "1rem", "space-xl": "1.5rem"
+          },
+          borderRadius: { "sm": "0.25rem", "DEFAULT": "0.5rem", "md": "0.75rem", "lg": "1rem", "xl": "1.5rem", "full": "9999px" }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-surface text-on-surface font-body-md">
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-24 left-1/2 -translate-x-1/2 z-[80] w-full max-w-[440px] px-4">
+    <div class="rounded-xl bg-inverse-surface text-inverse-on-surface px-4 py-3 flex items-center justify-between shadow-lg toast-anim">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px] text-primary-fixed">check_circle</span>
+        <span id="toast-text" class="font-body-md text-body-md">Done</span>
+      </div>
+      <button onclick="hideToast()" class="text-inverse-on-surface/70 hover:text-inverse-on-surface">
+        <span class="material-symbols-outlined text-[16px]">close</span>
+      </button>
+    </div>
+  </div>
+
+  <main class="max-w-[480px] mx-auto min-h-screen flex flex-col pb-40 p-margin pt-safe">
+
+    <!-- Empty State -->
+    <div id="empty-state" class="hidden flex flex-col items-center justify-center min-h-[80vh] gap-4 px-6">
+      <div class="w-20 h-20 rounded-2xl bg-surface-container flex items-center justify-center text-secondary/40">
+        <span class="material-symbols-outlined text-[48px]">receipt_long</span>
+      </div>
+      <div class="flex flex-col items-center text-center gap-1">
+        <span class="font-headline-md text-headline-md text-on-surface">No Invoice Draft</span>
+        <span class="font-body-md text-body-md text-on-surface-variant max-w-[260px]">Create an invoice first to preview it here.</span>
+      </div>
+      <a href="create.html" class="h-12 px-6 rounded-xl bg-primary text-on-primary font-headline-sm text-headline-sm flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-all">
+        <span class="material-symbols-outlined text-[20px]">edit_document</span>
+        <span>Create Invoice</span>
+      </a>
+    </div>
+
+    <!-- Content (hidden until draft loaded) -->
+    <div id="content" class="hidden flex flex-col">
+
+      <!-- Top Bar -->
+      <div class="flex items-center justify-between py-space-xs">
+        <div class="flex items-center gap-space-xs">
+          <a href="create.html" class="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high transition-transform active:scale-95">
+            <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+          </a>
+          <div class="flex flex-col">
+            <div class="flex items-center gap-space-xs">
+              <span class="font-headline-sm text-headline-sm text-on-surface" id="preview-inv-number">—</span>
+            </div>
+            <span class="font-body-sm text-body-sm text-on-surface-variant">Live Preview &amp; Verification</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-space-xs">
+          <button onclick="doPrint()" aria-label="Print Invoice" class="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" type="button">
+            <span class="material-symbols-outlined text-[20px]">print</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Ready Chip -->
+      <div class="flex items-center justify-between px-space-md py-space-sm rounded-xl bg-primary/10 text-primary">
+        <div class="flex items-center gap-space-xs">
+          <span class="relative flex h-2.5 w-2.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+          </span>
+          <span class="font-label-caps text-label-caps uppercase tracking-wider font-semibold">Ready to Send</span>
+        </div>
+        <span class="font-body-sm text-body-sm text-on-surface-variant">Tap preview to inspect</span>
+      </div>
+
+      <!-- Invoice Paper Card -->
+      <div class="relative w-full rounded-xl bg-surface-container-lowest shadow-xl overflow-hidden">
+        <!-- Accent bar: colored from settings accent -->
+        <div id="accent-bar" class="h-2 w-full bg-primary-container"></div>
+        <div class="p-space-lg flex flex-col gap-space-lg">
+
+          <!-- Header: profile company -->
+          <div class="flex items-start justify-between">
+            <div class="flex flex-col">
+              <div class="flex items-center gap-space-xs mb-1">
+                <div class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center text-on-primary overflow-hidden shrink-0" id="preview-logo-box">
+                  <span class="font-label-caps font-bold text-on-surface" id="preview-logo-initials">—</span>
+                </div>
+                <span class="font-headline-sm text-headline-sm text-on-surface tracking-tight" id="preview-company-name">Your Business</span>
+              </div>
+              <span class="font-label-caps text-label-caps text-on-surface-variant uppercase" id="preview-company-tagline"></span>
+            </div>
+            <div class="flex flex-col items-end">
+              <span class="font-headline-lg text-headline-lg text-inverse-surface tracking-tight uppercase" id="preview-doc-type">Invoice</span>
+              <span class="font-label-numeric-sm text-label-numeric-sm text-primary font-bold mt-0.5" id="preview-inv-num">—</span>
+            </div>
+          </div>
+
+          <!-- Dates -->
+          <div class="grid grid-cols-2 gap-space-sm p-space-sm rounded-lg bg-surface-container-low">
+            <div class="flex flex-col">
+              <span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Issue Date</span>
+              <span class="font-label-numeric-sm text-label-numeric-sm text-on-surface font-semibold mt-0.5" id="preview-issue-date">—</span>
+            </div>
+            <div class="flex flex-col items-end">
+              <span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Payment Terms</span>
+              <span class="font-label-numeric-sm text-label-numeric-sm text-on-surface font-semibold mt-0.5" id="preview-terms">—</span>
+            </div>
+          </div>
+
+          <!-- Addresses -->
+          <div class="grid grid-cols-1 gap-space-md">
+            <div class="p-space-sm rounded-lg bg-surface-container">
+              <div class="flex items-center gap-space-xs mb-1">
+                <span class="material-symbols-outlined text-[16px] text-primary">business</span>
+                <span class="font-label-caps text-label-caps text-on-surface-variant uppercase font-semibold">Billed To</span>
+              </div>
+              <div class="font-headline-sm text-headline-sm text-on-surface" id="preview-client-name">—</div>
+              <div class="font-label-numeric-sm text-label-numeric-sm text-primary mt-1" id="preview-client-email"></div>
+            </div>
+            <div class="p-space-sm rounded-lg bg-surface-container-low">
+              <div class="flex items-center gap-space-xs mb-1">
+                <span class="material-symbols-outlined text-[16px] text-secondary">domain</span>
+                <span class="font-label-caps text-label-caps text-on-surface-variant uppercase font-semibold">Issued By</span>
+              </div>
+              <div class="font-headline-sm text-headline-sm text-on-surface" id="preview-issuer-name">—</div>
+              <div class="font-body-sm text-body-sm text-on-surface-variant mt-0.5" id="preview-issuer-address"></div>
+              <div class="font-label-numeric-sm text-label-numeric-sm text-on-surface-variant mt-1" id="preview-issuer-email"></div>
+            </div>
+          </div>
+
+          <!-- Line Items -->
+          <div class="flex flex-col gap-space-xs">
+            <div class="flex items-center justify-between pb-1">
+              <span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Description</span>
+              <span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Total</span>
+            </div>
+            <div id="preview-line-items" class="flex flex-col gap-space-xs"></div>
+          </div>
+
+          <!-- Totals -->
+          <div class="flex flex-col gap-space-xs p-space-md rounded-xl bg-surface-container">
+            <div class="flex items-center justify-between">
+              <span class="font-body-md text-body-md text-on-surface-variant">Subtotal</span>
+              <span class="font-label-numeric-md text-label-numeric-md text-on-surface" id="preview-subtotal">$0.00</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1">
+                <span class="font-body-md text-body-md text-on-surface-variant">Discount</span>
+                <span class="px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-label-numeric-sm text-label-numeric-sm" id="preview-discount-pct">0%</span>
+              </div>
+              <span class="font-label-numeric-md text-label-numeric-md text-primary font-medium" id="preview-discount-amount">-$0.00</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1">
+                <span class="font-body-md text-body-md text-on-surface-variant">Tax</span>
+                <span class="px-1.5 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-label-numeric-sm text-label-numeric-sm" id="preview-tax-pct">0%</span>
+              </div>
+              <span class="font-label-numeric-md text-label-numeric-md text-on-surface" id="preview-tax-amount">+$0.00</span>
+            </div>
+            <div id="total-bar" class="mt-space-xs p-space-sm rounded-lg bg-primary text-on-primary flex items-center justify-between shadow-md">
+              <div class="flex flex-col">
+                <span class="font-label-caps text-label-caps uppercase tracking-wider text-on-primary/80">Total Due</span>
+                <span class="font-body-sm text-body-sm text-on-primary/90" id="preview-currency-label">USD Net</span>
+              </div>
+              <span class="font-display-lg text-display-lg font-bold tracking-tight" id="preview-total">$0.00</span>
+            </div>
+          </div>
+
+          <!-- Payment Methods (only show if configured in profile) -->
+          <div id="payment-section" class="flex flex-col gap-space-sm hidden">
+            <!-- Wire / ACH -->
+            <div id="wire-section" class="hidden p-space-sm rounded-xl bg-surface-container-low flex items-center gap-space-md">
+              <div class="flex-1 flex flex-col gap-0.5 min-w-0">
+                <div class="flex items-center gap-1 text-primary">
+                  <span class="material-symbols-outlined text-[18px]">account_balance</span>
+                  <span class="font-headline-sm text-headline-sm text-on-surface">Wire / ACH</span>
+                </div>
+                <div class="font-body-sm text-body-sm text-on-surface-variant truncate" id="wire-bank-name"></div>
+                <div class="font-label-numeric-sm text-label-numeric-sm text-on-surface mt-0.5">Routing: <span class="font-bold" id="wire-routing"></span></div>
+                <div class="font-label-numeric-sm text-label-numeric-sm text-on-surface">Account: <span class="font-bold" id="wire-account"></span></div>
+              </div>
+            </div>
+            <!-- M-Pesa -->
+            <button id="mpesa-section" class="hidden w-full p-space-sm rounded-xl bg-surface-container-low flex items-center justify-between hover:bg-surface-container transition-colors text-left" onclick="openMpesa()" type="button">
+              <div class="flex items-center gap-space-sm">
+                <div class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                  <span class="material-symbols-outlined text-[24px]">phone_android</span>
+                </div>
+                <div class="flex flex-col">
+                  <span class="font-headline-sm text-body-md text-on-surface font-semibold">M-Pesa</span>
+                  <span class="font-body-sm text-body-sm text-secondary">Prompt payment via STK push</span>
+                </div>
+              </div>
+              <span class="material-symbols-outlined text-primary text-[22px]">chevron_right</span>
+            </button>
+          </div>
+
+          <!-- Footer Note -->
+          <div class="text-center pt-space-xs">
+            <p class="font-body-sm text-body-sm text-on-surface-variant" id="preview-footer-note"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col gap-space-xs pt-space-xs pb-space-sm">
+        <button onclick="sendInvoice()" class="w-full h-12 rounded-xl bg-primary text-on-primary font-headline-sm text-headline-sm flex items-center justify-center gap-space-xs shadow-lg shadow-primary/20 hover:bg-primary-container active:scale-[0.98] transition-all" type="button">
+          <span class="material-symbols-outlined text-[22px]">send</span>
+          <span>Send to Client</span>
+        </button>
+        <button onclick="sendWhatsApp()" class="w-full h-12 rounded-xl bg-[#25D366] text-white font-headline-sm text-headline-sm flex items-center justify-center gap-space-xs shadow-lg shadow-[#25D366]/20 hover:brightness-105 active:scale-[0.98] transition-all" type="button">
+          <svg viewBox="0 0 24 24" class="w-[22px] h-[22px]" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.019-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          <span>Send via WhatsApp</span>
+        </button>
+        <div class="grid grid-cols-2 gap-space-xs">
+          <button onclick="doPrint()" class="h-11 rounded-xl bg-surface-container text-on-surface font-body-lg text-body-lg font-medium flex items-center justify-center gap-space-xs hover:bg-surface-container-high active:scale-[0.98] transition-all" type="button">
+            <span class="material-symbols-outlined text-[18px] text-primary">download</span>
+            <span>Download PDF</span>
+          </button>
+          <button onclick="copyShareLink()" class="h-11 rounded-xl bg-surface-container text-on-surface font-body-lg text-body-lg font-medium flex items-center justify-center gap-space-xs hover:bg-surface-container-high active:scale-[0.98] transition-all" type="button">
+            <span class="material-symbols-outlined text-[18px] text-primary">link</span>
+            <span>Share Link</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- M-Pesa Payment Modal -->
+  <div id="mpesa-modal" class="hidden fixed inset-0 z-[70] flex items-end justify-center">
+    <div class="absolute inset-0 bg-black/45" onclick="closeMpesa()"></div>
+    <div class="relative w-full max-w-[480px] bg-surface rounded-t-2xl p-5 pb-8 px-margin pt-safe modal-anim">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <span class="material-symbols-outlined text-[22px]">smartphone</span>
+          </div>
+          <span class="font-headline-md text-headline-md text-on-surface font-semibold">M-Pesa Payment</span>
+        </div>
+        <button onclick="closeMpesa()" class="w-9 h-9 flex items-center justify-center rounded-full bg-surface-container text-secondary">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
+
+      <div id="mpesa-step-entry">
+        <div class="bg-surface-container-low rounded-xl p-space-md mb-4 flex items-center justify-between">
+          <div class="flex flex-col">
+            <span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Amount to Collect</span>
+            <span class="font-headline-lg text-headline-lg text-primary font-bold font-label-numeric-lg" id="mpesa-amount">—</span>
+          </div>
+          <div class="flex flex-col items-end">
+            <span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Paybill / Till</span>
+            <span class="font-label-numeric-md text-label-numeric-md text-on-surface font-semibold" id="mpesa-bill">Configure in Settings</span>
+          </div>
+        </div>
+        <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Customer M-Pesa Number</label>
+        <input id="mpesa-phone" type="tel" placeholder="07XX XXX XXX" class="w-full mt-1 mb-4 h-12 px-4 rounded-xl bg-surface-container-low text-on-surface font-label-numeric-md text-label-numeric-md focus:outline-none focus:ring-2 focus:ring-primary"/>
+        <button onclick="requestMpesa()" class="w-full h-12 rounded-xl bg-emerald-700 text-white font-headline-sm text-headline-sm flex items-center justify-center gap-2 shadow-md shadow-emerald-700/20 active:scale-[0.98] transition-all">
+          <span class="material-symbols-outlined text-[20px]">bolt</span>
+          <span>Request Payment (STK Push)</span>
+        </button>
+      </div>
+
+      <div id="mpesa-step-sending" class="hidden flex flex-col items-center py-4">
+        <div class="w-14 h-14 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center animate-pulse mb-3">
+          <span class="material-symbols-outlined text-[28px]">smartphone</span>
+        </div>
+        <span class="font-headline-sm text-headline-sm text-on-surface font-semibold">STK Push Sent</span>
+        <p class="font-body-sm text-body-sm text-secondary text-center mt-1">Please enter your M-Pesa PIN on your phone to approve payment of <span class="font-semibold" id="mpesa-sending-amount">—</span></p>
+        <button onclick="confirmMpesa()" class="mt-5 w-full h-12 rounded-xl bg-emerald-700 text-white font-headline-sm text-headline-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+          <span class="material-symbols-outlined text-[20px]">check</span>
+          <span>I've Authorized Payment</span>
+        </button>
+      </div>
+
+      <div id="mpesa-step-success" class="hidden flex flex-col items-center py-4">
+        <div class="w-14 h-14 rounded-full bg-primary-fixed/40 text-primary flex items-center justify-center mb-3">
+          <span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+        </div>
+        <span class="font-headline-sm text-headline-sm text-on-surface font-semibold">Payment Received!</span>
+        <p class="font-body-sm text-body-sm text-secondary text-center mt-1" id="mpesa-success-text">M-Pesa confirmation sent to your phone.</p>
+        <button onclick="closeMpesa()" class="mt-5 w-full h-12 rounded-xl bg-primary text-on-primary font-headline-sm text-headline-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all">
+          <span class="material-symbols-outlined text-[20px]">done_all</span>
+          <span>Done</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/85 backdrop-blur-xl shadow-[0_-2px_12px_rgba(0,0,0,0.05)]">
+    <div class="flex justify-around items-center h-16 px-gutter max-w-[480px] mx-auto w-full">
+      <a href="index.html" class="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] gap-0.5 text-on-surface-variant hover:text-on-surface transition-colors">
+        <span class="material-symbols-outlined text-[24px]">receipt_long</span>
+        <span class="font-label-caps text-label-caps">Invoices</span>
+      </a>
+      <a href="create.html" class="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] gap-0.5 text-on-surface-variant hover:text-on-surface transition-colors">
+        <div class="w-10 h-10 -mt-3 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-md shadow-primary/20">
+          <span class="material-symbols-outlined text-[22px]">edit_document</span>
+        </div>
+        <span class="font-label-caps text-label-caps mt-0.5">Create</span>
+      </a>
+      <a href="preview.html" class="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] gap-0.5 text-primary font-semibold">
+        <span class="material-symbols-outlined text-[24px]">visibility</span>
+        <span class="font-label-caps text-label-caps">Preview</span>
+      </a>
+      <a href="settings.html" class="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] gap-0.5 text-on-surface-variant hover:text-on-surface transition-colors">
+        <span class="material-symbols-outlined text-[24px]">settings</span>
+        <span class="font-label-caps text-label-caps">Settings</span>
+      </a>
+    </div>
+  </nav>
+
+  <script>
+    (function() {
+      localStorage.removeItem('ledgerflow_draft');
+      var INV_KEY    = 'ledgerflow_invoices';
+      var SETTINGS_KEY = 'ledgerflow_settings';
+      var DRAFT_KEY  = 'ledgerflow_draft_v2';
+      var LOGO_KEY   = 'ledgerflow_logo';
+      var PROFILE_KEY = 'ledgerflow_profile';
+      var MPESA_KEY  = 'ledgerflow_mpesa';
+
+      function getJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } }
+
+      // Toast
+      var toastTimer = null;
+      window.showToast = function(msg) {
+        var el = document.getElementById('toast');
+        document.getElementById('toast-text').textContent = msg;
+        el.classList.remove('hidden');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(function(){ el.classList.add('hidden'); }, 3200);
+      };
+      window.hideToast = function() { document.getElementById('toast').classList.add('hidden'); };
+
+      // Load data
+      var draft   = getJSON(DRAFT_KEY);
+      var settings = getJSON(SETTINGS_KEY) || {};
+      var profile  = getJSON(PROFILE_KEY) || {};
+      var mpesa    = getJSON(MPESA_KEY) || {};
+
+      // Empty state
+      if (!draft || !draft.lineItems || draft.lineItems.length === 0) {
+        document.getElementById('empty-state').classList.remove('hidden');
+        document.getElementById('content').classList.add('hidden');
+        return;
+      }
+
+      // Show content
+      document.getElementById('content').classList.remove('hidden');
+
+      var symbol = draft.symbol || settings.symbol || '$';
+
+      // Accent bar color from settings
+      if (settings.accent) {
+        document.getElementById('accent-bar').style.backgroundColor = settings.accent;
+        document.getElementById('total-bar').style.backgroundColor = settings.accent;
+      }
+
+      // Profile header
+      var companyName = profile.businessName || 'Your Business';
+      var ownerName   = profile.ownerName || '';
+      var tagline     = profile.tagline || '';
+      var profAddress = profile.address || '';
+      var profEmail   = profile.email || '';
+      var bankName    = profile.bankName || '';
+      var bankRouting = profile.bankRouting || '';
+      var bankAccount = profile.bankAccount || '';
+
+      document.getElementById('preview-company-name').textContent = companyName;
+      document.getElementById('preview-company-tagline').textContent = tagline.toUpperCase();
+
+      var initialsEl = document.getElementById('preview-logo-initials');
+      initialsEl.textContent = companyName.split(/\s+/).slice(0, 2).map(function(w){ return w[0]; }).join('').toUpperCase();
+
+      // Logo override from settings
+      var logoData = localStorage.getItem(LOGO_KEY);
+      if (logoData) {
+        var logoBox = document.getElementById('preview-logo-box');
+        logoBox.innerHTML = '<img src="' + logoData + '" class="w-full h-full object-cover"/>';
+      }
+
+      // Issuer details
+      document.getElementById('preview-issuer-name').textContent = ownerName || companyName;
+      document.getElementById('preview-issuer-address').textContent = profAddress || '';
+      document.getElementById('preview-issuer-email').textContent = profEmail || '';
+
+      // Draft data
+      function fmt(n) { return symbol + n.toLocaleString('en-US', { minimumFractionDigits: 2 }); }
+      function fmtDate(iso) {
+        if (!iso) return '—';
+        var d = new Date(iso + 'T00:00:00');
+        if (isNaN(d)) return iso;
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+
+      var invNumber = draft.id || '—';
+      document.getElementById('preview-inv-number').textContent = invNumber;
+      document.getElementById('preview-inv-num').textContent = '#' + invNumber;
+      document.getElementById('preview-doc-type').textContent = draft.mode === 'receipt' ? 'Receipt' : 'Invoice';
+
+      document.getElementById('preview-client-name').textContent = draft.clientName || '—';
+      document.getElementById('preview-client-email').textContent = draft.clientEmail || '';
+      document.getElementById('preview-issue-date').textContent = fmtDate(draft.issueDate);
+
+      var terms = parseInt(draft.terms) || 30;
+      document.getElementById('preview-terms').textContent = terms === 0 ? 'Due on Receipt' : 'Net ' + terms;
+
+      // Line items
+      var li = draft.lineItems || [];
+      document.getElementById('preview-line-items').innerHTML = li.map(function(item) {
+        var amt = (item.qty || 0) * (item.rate || 0);
+        return '<div class="p-space-sm rounded-lg bg-surface-container-low flex flex-col gap-1">'
+          + '<div class="flex items-start justify-between gap-space-sm">'
+            + '<div class="font-headline-sm text-headline-sm text-on-surface">' + (item.description || '—') + '</div>'
+            + '<div class="font-label-numeric-md text-label-numeric-md text-on-surface font-semibold">' + fmt(amt) + '</div>'
+          + '</div>'
+          + '<div class="flex items-center justify-between text-on-surface-variant font-label-numeric-sm text-label-numeric-sm">'
+            + '<span>' + (item.detail || '') + '</span>'
+            + '<span>' + (item.qty || 0) + ' ' + (item.unit || 'service') + ' \u00D7 ' + fmt(item.rate || 0) + '</span>'
+          + '</div>'
+        + '</div>';
+      }).join('');
+
+      var subtotal = li.reduce(function(s, it) { return s + ((it.qty || 0) * (it.rate || 0)); }, 0);
+      var discount = subtotal * ((draft.discountRate || 0) / 100);
+      var taxable  = subtotal - discount;
+      var tax      = taxable * ((draft.taxRate || 0) / 100);
+      var total    = taxable + tax;
+
+      document.getElementById('preview-subtotal').textContent = fmt(subtotal);
+      document.getElementById('preview-discount-pct').textContent = (draft.discountRate || 0) + '%';
+      document.getElementById('preview-discount-amount').textContent = '-' + fmt(discount);
+      document.getElementById('preview-tax-pct').textContent = (draft.taxRate || 0) + '%';
+      document.getElementById('preview-tax-amount').textContent = '+' + fmt(tax);
+      document.getElementById('preview-total').textContent = fmt(total);
+      document.getElementById('preview-currency-label').textContent = (draft.currency || 'USD') + ' Net';
+      document.getElementById('preview-footer-note').textContent = draft.note || '';
+
+      // Payment sections
+      var paymentSection = document.getElementById('payment-section');
+      var wireSection    = document.getElementById('wire-section');
+      var mpesaSection   = document.getElementById('mpesa-section');
+
+      if (bankName || bankRouting || bankAccount) {
+        paymentSection.classList.remove('hidden');
+        wireSection.classList.remove('hidden');
+        document.getElementById('wire-bank-name').textContent = bankName || 'Bank not configured';
+        document.getElementById('wire-routing').textContent   = bankRouting || '—';
+        document.getElementById('wire-account').textContent   = bankAccount ? ('****' + bankAccount.slice(-4)) : '—';
+      }
+
+      if (mpesa.till || mpesa.account) {
+        paymentSection.classList.remove('hidden');
+        mpesaSection.classList.remove('hidden');
+        document.getElementById('mpesa-bill').textContent = mpesa.till || mpesa.account || 'Configure in Settings';
+      }
+
+      // M-Pesa modal amounts
+      document.getElementById('mpesa-amount').textContent = fmt(total);
+      document.getElementById('mpesa-sending-amount').textContent = fmt(total);
+
+      // Save to invoices helper
+      function saveToInvoices(status, dueIn) {
+        try {
+          var invs = getJSON(INV_KEY) || [];
+          var newInv = {
+            id: draft.id,
+            client: draft.clientName,
+            email: draft.clientEmail,
+            description: li.length > 0 ? li[0].description : 'Invoice',
+            amount: Math.round(total * 100) / 100,
+            symbol: symbol,
+            currency: draft.currency,
+            status: status,
+            dueIn: dueIn,
+            initials: (draft.clientName || 'CL').split(/\s+/).map(function(w){ return w[0]; }).join('').substring(0, 2).toUpperCase()
+          };
+          var existing = invs.filter(function(i){ return i.id === draft.id; })[0];
+          if (existing) {
+            invs = invs.map(function(i){ return i.id === draft.id ? newInv : i; });
+          } else {
+            invs.unshift(newInv);
+          }
+          localStorage.setItem(INV_KEY, JSON.stringify(invs));
+        } catch(e) {}
+      }
+
+      // Send
+      window.sendInvoice = function() {
+        saveToInvoices('paid', 'Paid just now');
+        showToast('Invoice ' + draft.id + ' dispatched via email!');
+      };
+
+      // WhatsApp
+      window.sendWhatsApp = function() {
+        var client = draft.clientName || 'Client';
+        var termsLabel = terms === 0 ? 'Due on Receipt' : 'Net ' + terms;
+        var msg = 'Hello ' + client + ',\n\n'
+          + 'Your invoice ' + draft.id + ' from ' + companyName + ' is ready.\n'
+          + 'Amount Due: ' + fmt(total) + ' (' + (draft.currency || 'USD') + ')\n'
+          + 'Terms: ' + termsLabel + '\n\n'
+          + 'Kindly make payment. Thank you!';
+        window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+      };
+
+      window.copyShareLink = function() {
+        var url = 'https://ledgerflow.app/i/' + draft.id;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(function(){ showToast('Payment link copied to clipboard.'); });
+        } else {
+          showToast('Payment link copied to clipboard.');
+        }
+      };
+
+      window.doPrint = function() { showToast('Sending document to printer...'); };
+
+      // M-Pesa
+      window.openMpesa = function() {
+        document.getElementById('mpesa-step-entry').classList.remove('hidden');
+        document.getElementById('mpesa-step-sending').classList.add('hidden');
+        document.getElementById('mpesa-step-success').classList.add('hidden');
+        document.getElementById('mpesa-modal').classList.remove('hidden');
+        document.getElementById('mpesa-phone').value = '';
+      };
+      window.closeMpesa = function() { document.getElementById('mpesa-modal').classList.add('hidden'); };
+      window.requestMpesa = function() {
+        var phone = document.getElementById('mpesa-phone').value.replace(/\s+/g, '');
+        if (!phone) { showToast('Enter the customer M-Pesa number'); return; }
+        if (!/^(07\d{8}|\+?2547\d{8}|2547\d{8})$/.test(phone)) {
+          showToast('Enter a valid M-Pesa number like 07XX XXX XXX');
+          return;
+        }
+        document.getElementById('mpesa-step-entry').classList.add('hidden');
+        document.getElementById('mpesa-step-sending').classList.remove('hidden');
+        showToast('STK push sent to ' + phone.replace(/^(\d{2})(\d{2})/, '$1XX XX'));
+      };
+      window.confirmMpesa = function() {
+        document.getElementById('mpesa-step-sending').classList.add('hidden');
+        document.getElementById('mpesa-step-success').classList.remove('hidden');
+        document.getElementById('mpesa-success-text').textContent = 'Confirmation sent to your phone. Invoice reference ' + draft.id + ' marked as paid via M-Pesa.';
+        saveToInvoices('paid', 'Paid via M-Pesa');
+        showToast('Payment received via M-Pesa!');
+      };
+    })();
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js').catch(function() {});
+      });
+    }
+  </script>
+</body>
+</html>
