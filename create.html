@@ -118,14 +118,28 @@
       </div>
     </div>
 
-    <!-- Mode Toggle -->
-    <div class="w-full bg-surface-container-low p-1 rounded-xl shadow-sm flex items-center">
-      <button class="flex-1 flex items-center justify-center gap-space-xs py-2.5 rounded-lg bg-surface-container-lowest text-primary shadow-sm font-headline-sm text-headline-sm transition-all duration-200" id="mode-invoice" type="button">
-        <span class="material-symbols-outlined text-[18px]">receipt</span><span>Invoice</span>
-      </button>
-      <button class="flex-1 flex items-center justify-center gap-space-xs py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface font-headline-sm text-headline-sm transition-all duration-200" id="mode-receipt" type="button">
-        <span class="material-symbols-outlined text-[18px]">bolt</span><span>Instant Receipt</span>
-      </button>
+    <!-- Document Type -->
+    <div class="w-full bg-surface-container-low p-1 rounded-xl shadow-sm">
+      <div class="grid grid-cols-3 gap-space-xs">
+        <button class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg bg-surface-container-lowest text-primary shadow-sm font-headline-sm text-headline-sm transition-all duration-200" id="mode-invoice" type="button">
+          <span class="material-symbols-outlined text-[18px]">receipt_long</span><span>Invoice</span>
+        </button>
+        <button class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface font-headline-sm text-headline-sm transition-all duration-200" id="mode-receipt" type="button">
+          <span class="material-symbols-outlined text-[18px]">bolt</span><span>Receipt</span>
+        </button>
+        <button class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface font-headline-sm text-headline-sm transition-all duration-200" id="mode-quote" type="button">
+          <span class="material-symbols-outlined text-[18px]">request_quote</span><span>Quote</span>
+        </button>
+        <button class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface font-headline-sm text-headline-sm transition-all duration-200" id="mode-proforma" type="button">
+          <span class="material-symbols-outlined text-[18px]">receipt</span><span>Proforma</span>
+        </button>
+        <button class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface font-headline-sm text-headline-sm transition-all duration-200" id="mode-creditnote" type="button">
+          <span class="material-symbols-outlined text-[18px]">assignment_return</span><span>Credit Note</span>
+        </button>
+        <button class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface font-headline-sm text-headline-sm transition-all duration-200" id="mode-deliverynote" type="button">
+          <span class="material-symbols-outlined text-[18px]">local_shipping</span><span>Delivery</span>
+        </button>
+      </div>
     </div>
 
     <!-- Client Info -->
@@ -352,25 +366,35 @@
       };
       window.hideToast = function() { document.getElementById('toast').classList.add('hidden'); };
 
-      // Mode
-      var incBtn = document.getElementById('mode-invoice');
-      var recBtn = document.getElementById('mode-receipt');
+      // Document types
+      var DOC_TYPES = {
+        invoice:      { key: 'invoice',      label: 'Invoice',          title: 'INVOICE',           prefix: 'INV', addrLabel: 'Billed To',   totalLabel: 'Total Due' },
+        receipt:      { key: 'receipt',      label: 'Receipt',          title: 'RECEIPT',           prefix: 'RCT', addrLabel: 'Billed To',   totalLabel: 'Total Paid' },
+        quote:        { key: 'quote',        label: 'Quote',            title: 'QUOTATION',         prefix: 'QT',  addrLabel: 'Prepared For', totalLabel: 'Estimated Total' },
+        proforma:     { key: 'proforma',     label: 'Proforma Invoice', title: 'PROFORMA INVOICE',  prefix: 'PF',  addrLabel: 'Billed To',   totalLabel: 'Estimated Total' },
+        creditnote:   { key: 'creditnote',   label: 'Credit Note',      title: 'CREDIT NOTE',       prefix: 'CN',  addrLabel: 'Billed To',   totalLabel: 'Credit Total' },
+        deliverynote: { key: 'deliverynote', label: 'Delivery Note',    title: 'DELIVERY NOTE',     prefix: 'DN',  addrLabel: 'Deliver To',  totalLabel: 'Goods Value' }
+      };
       var reviewBtn = document.getElementById('btn-review');
       var mode = 'invoice';
       function setMode(m) {
         mode = m;
-        var activeCls = 'flex-1 flex items-center justify-center gap-space-xs py-2.5 rounded-lg bg-surface-container-lowest text-primary shadow-sm font-headline-sm text-headline-sm transition-all duration-200';
-        var idleCls = 'flex-1 flex items-center justify-center gap-space-xs py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface font-headline-sm text-headline-sm transition-all duration-200';
-        if (m === 'invoice') {
-          incBtn.className = activeCls; recBtn.className = idleCls;
-          reviewBtn.innerHTML = '<span>Review &amp; Preview</span><span class="material-symbols-outlined text-[20px]">arrow_forward</span>';
-        } else {
-          recBtn.className = activeCls; incBtn.className = idleCls;
-          reviewBtn.innerHTML = '<span>Generate Receipt</span><span class="material-symbols-outlined text-[20px]">bolt</span>';
+        var activeCls = 'flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg bg-surface-container-lowest text-primary shadow-sm font-headline-sm text-headline-sm transition-all duration-200';
+        var idleCls = 'flex flex-col items-center justify-center gap-1 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface font-headline-sm text-headline-sm transition-all duration-200';
+        Object.keys(DOC_TYPES).forEach(function(k) {
+          var b = document.getElementById('mode-' + k);
+          if (b) b.className = (k === m) ? activeCls : idleCls;
+        });
+        if (numInput) {
+          numInput.value = nextNumber(m);
+          document.getElementById('draft-label').textContent = numInput.value.split('-').slice(-1)[0] || 'NEW';
         }
+        var action = DOC_TYPES[m].label === 'Receipt' ? 'Generate Receipt' : 'Review &amp; Preview';
+        reviewBtn.innerHTML = '<span>' + action + '</span><span class="material-symbols-outlined text-[20px]">arrow_forward</span>';
       }
-      incBtn.addEventListener('click', function(){ setMode('invoice'); });
-      recBtn.addEventListener('click', function(){ setMode('receipt'); });
+      Object.keys(DOC_TYPES).forEach(function(k) {
+        document.getElementById('mode-' + k).addEventListener('click', function(){ setMode(k); });
+      });
 
       // Currency
       var baseCurrencies = [
@@ -497,21 +521,22 @@
       });
       document.getElementById('client-email').addEventListener('input', function() { scheduleAutosave(); });
 
-      // Invoice number auto
-      function nextNumber() {
+      // Serial number auto (per document type)
+      function nextNumber(m) {
+        var t = DOC_TYPES[m] || DOC_TYPES.invoice;
         try {
           var invs = JSON.parse(localStorage.getItem(INV_KEY)) || [];
           var last = 0;
           invs.forEach(function(i) {
-            var m = /(\d+)$/.exec(i.id || '');
-            if (m) { var n = parseInt(m[1]); if (n > last) last = n; }
+            var re = new RegExp('^' + t.prefix + '-\\d{4}-(\\d+)$');
+            var mm = re.exec(i.id || '');
+            if (mm) { var n = parseInt(mm[1]); if (n > last) last = n; }
           });
-          return 'INV-' + new Date().getFullYear() + '-' + String(last + 1).padStart(3, '0');
-        } catch(e) { return 'INV-' + new Date().getFullYear() + '-001'; }
+          return t.prefix + '-' + new Date().getFullYear() + '-' + String(last + 1).padStart(3, '0');
+        } catch(e) { return t.prefix + '-' + new Date().getFullYear() + '-001'; }
       }
       var numInput = document.getElementById('invoice-number');
-      numInput.value = nextNumber();
-      document.getElementById('draft-label').textContent = numInput.value.split('-').slice(-1)[0] || 'NEW';
+      setMode(mode);
       numInput.addEventListener('input', function() {
         document.getElementById('draft-label').textContent = numInput.value.split('-').slice(-1)[0] || 'NEW';
         scheduleAutosave();

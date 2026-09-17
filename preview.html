@@ -202,7 +202,7 @@
             <div class="p-space-sm rounded-lg bg-surface-container">
               <div class="flex items-center gap-space-xs mb-1">
                 <span class="material-symbols-outlined text-[16px] text-primary">business</span>
-                <span class="font-label-caps text-label-caps text-on-surface-variant uppercase font-semibold">Billed To</span>
+                <span class="font-label-caps text-label-caps text-on-surface-variant uppercase font-semibold" id="preview-billed-label">Billed To</span>
               </div>
               <div class="font-headline-sm text-headline-sm text-on-surface" id="preview-client-name">—</div>
               <div class="font-label-numeric-sm text-label-numeric-sm text-primary mt-1" id="preview-client-email"></div>
@@ -249,7 +249,7 @@
             </div>
             <div id="total-bar" class="mt-space-xs p-space-sm rounded-lg bg-primary text-on-primary flex items-center justify-between shadow-md">
               <div class="flex flex-col">
-                <span class="font-label-caps text-label-caps uppercase tracking-wider text-on-primary/80">Total Due</span>
+                <span class="font-label-caps text-label-caps uppercase tracking-wider text-on-primary/80" id="preview-total-label">Total Due</span>
                 <span class="font-body-sm text-body-sm text-on-primary/90" id="preview-currency-label">USD Net</span>
               </div>
               <span class="font-display-lg text-display-lg font-bold tracking-tight" id="preview-total">$0.00</span>
@@ -417,6 +417,15 @@
       var PROFILE_KEY = 'ledgerflow_profile';
       var MPESA_KEY  = 'ledgerflow_mpesa';
 
+      var DOC_TYPES = {
+        invoice:      { key: 'invoice',      label: 'Invoice',          title: 'INVOICE',           prefix: 'INV', addrLabel: 'Billed To',   totalLabel: 'Total Due' },
+        receipt:      { key: 'receipt',      label: 'Receipt',          title: 'RECEIPT',           prefix: 'RCT', addrLabel: 'Billed To',   totalLabel: 'Total Paid' },
+        quote:        { key: 'quote',        label: 'Quote',            title: 'QUOTATION',         prefix: 'QT',  addrLabel: 'Prepared For', totalLabel: 'Estimated Total' },
+        proforma:     { key: 'proforma',     label: 'Proforma Invoice', title: 'PROFORMA INVOICE',  prefix: 'PF',  addrLabel: 'Billed To',   totalLabel: 'Estimated Total' },
+        creditnote:   { key: 'creditnote',   label: 'Credit Note',      title: 'CREDIT NOTE',       prefix: 'CN',  addrLabel: 'Billed To',   totalLabel: 'Credit Total' },
+        deliverynote: { key: 'deliverynote', label: 'Delivery Note',    title: 'DELIVERY NOTE',     prefix: 'DN',  addrLabel: 'Deliver To',  totalLabel: 'Goods Value' }
+      };
+
       function getJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch(e) { return null; } }
 
       // Toast
@@ -449,6 +458,8 @@
 
       // Show content
       document.getElementById('content').classList.remove('hidden');
+
+      var dt = DOC_TYPES[draft.mode] || DOC_TYPES.invoice;
 
       var symbol = draft.symbol || settings.symbol || '$';
 
@@ -498,15 +509,18 @@
       var invNumber = draft.id || '—';
       document.getElementById('preview-inv-number').textContent = invNumber;
       document.getElementById('preview-inv-num').textContent = '#' + invNumber;
-      document.getElementById('preview-doc-type').textContent = draft.mode === 'receipt' ? 'Receipt' : 'Invoice';
+      document.getElementById('preview-doc-type').textContent = dt.title;
+      document.getElementById('preview-total-label').textContent = dt.totalLabel;
+      document.getElementById('preview-billed-label').textContent = dt.addrLabel;
 
       document.getElementById('preview-client-name').textContent = draft.clientName || '—';
       document.getElementById('preview-client-email').textContent = draft.clientEmail || '';
       document.getElementById('preview-issue-date').textContent = fmtDate(draft.issueDate);
 
       var terms = parseInt(draft.terms) || 30;
-      var termsLabel = terms === 0 ? 'Due on Receipt' : 'Net ' + terms;
-      var termsLine = terms === 0 ? 'All accounts are due on demand' : 'Payment due within ' + terms + ' days of issue';
+      var isQuote = dt.key === 'quote';
+      var termsLabel = isQuote ? (terms === 0 ? 'Valid on Request' : 'Valid ' + terms + ' days') : (terms === 0 ? 'Due on Receipt' : 'Net ' + terms);
+      var termsLine = isQuote ? (terms === 0 ? 'Prices valid on request' : 'Prices valid for ' + terms + ' days') : (terms === 0 ? 'All accounts are due on demand' : 'Payment due within ' + terms + ' days of issue');
       document.getElementById('preview-terms').textContent = termsLabel;
       document.getElementById('preview-terms-line').textContent = termsLine;
 
@@ -689,7 +703,7 @@
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(22);
           doc.setTextColor(dark);
-          doc.text(draft.mode === 'receipt' ? 'RECEIPT' : 'INVOICE', W - margin, 18, { align: 'right' });
+          doc.text(dt.title, W - margin, 18, { align: 'right' });
           doc.setFontSize(9);
           doc.setTextColor(green);
           doc.text('#' + invNumber, W - margin, 24, { align: 'right' });
@@ -714,7 +728,7 @@
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(8);
           doc.setTextColor('#3c4a42');
-          doc.text('BILLED TO', margin, y);
+          doc.text(dt.addrLabel.toUpperCase(), margin, y);
           doc.setTextColor(accent);
           doc.text('ISSUED BY', margin + colW, y);
           y += 5;
@@ -811,7 +825,7 @@
           doc.roundedRect(W - margin - 74, y - 5, 74, 15, 2, 2, 'F');
           doc.setTextColor('#ffffff');
           doc.setFontSize(6);
-          doc.text('TOTAL DUE', W - margin - 66, y - 1);
+          doc.text(dt.totalLabel.toUpperCase(), W - margin - 66, y - 1);
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(12);
           doc.text(fmt(total), W - margin - 6, y + 6, { align: 'right' });
