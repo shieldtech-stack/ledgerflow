@@ -387,7 +387,7 @@
         var term = (document.getElementById('invoice-search').value || '').toLowerCase().trim();
 
         var filtered = invoices.filter(function(inv) {
-          var okStatus = activeFilter === 'all' || inv.status === activeFilter;
+          var okStatus = activeFilter === 'all' || inv.status === activeFilter || (activeFilter === 'pending' && isOpen(inv));
           var okSearch = !term || (inv.client || '').toLowerCase().indexOf(term) >= 0 || (inv.id || '').toLowerCase().indexOf(term) >= 0 || String(inv.amount).indexOf(term) >= 0;
           return okStatus && okSearch;
         });
@@ -414,7 +414,7 @@
             if (inv.status === 'paid') {
               badgeClass = 'bg-emerald-50 text-emerald-700'; statusLabel = '<span class="w-1.5 h-1.5 rounded-full bg-primary-container"></span>Paid';
               avatarClass = 'bg-primary-fixed/30 text-on-primary-fixed'; dueClass = 'text-primary'; icon = 'check_circle';
-            } else if (inv.status === 'pending') {
+            } else if (isOpen(inv)) {
               if (inv.overdue) {
                 badgeClass = 'bg-rose-50 text-rose-700'; statusLabel = '<span class="w-1.5 h-1.5 rounded-full bg-rose-600"></span>Overdue';
                 avatarClass = 'bg-error-container text-on-error-container'; dueClass = 'text-error'; icon = 'warning';
@@ -453,14 +453,14 @@
         }
 
         document.querySelector('.tab-count-all').textContent = invoices.length;
-        document.querySelector('.tab-count-pending').textContent = invoices.filter(function(i){ return i.status === 'pending'; }).length;
+        document.querySelector('.tab-count-pending').textContent = invoices.filter(isOpen).length;
         document.querySelector('.tab-count-paid').textContent = invoices.filter(function(i){ return i.status === 'paid'; }).length;
         document.querySelector('.tab-count-draft').textContent = invoices.filter(function(i){ return i.status === 'draft'; }).length;
 
-        var outstanding = invoices.filter(function(i){ return i.status === 'pending'; }).reduce(function(s,i){ return s + i.amount; }, 0);
+        var outstanding = invoices.filter(isOpen).reduce(function(s,i){ return s + i.amount; }, 0);
         var overdue = invoices.filter(function(i){ return i.overdue; }).reduce(function(s,i){ return s + i.amount; }, 0);
         var paid = invoices.filter(function(i){ return i.status === 'paid'; }).reduce(function(s,i){ return s + i.amount; }, 0);
-        var pendingCount = invoices.filter(function(i){ return i.status === 'pending'; }).length;
+        var pendingCount = invoices.filter(isOpen).length;
         var paidCount = invoices.filter(function(i){ return i.status === 'paid'; }).length;
         var rate = (paidCount + pendingCount) === 0 ? 0 : Math.round(paidCount / (paidCount + pendingCount) * 100);
 
@@ -474,6 +474,10 @@
         document.getElementById('hero-rate').textContent = pendingCount + paidCount === 0 ? '—' : rate + '%';
       }
 
+      function isOpen(i) {
+        return i.status === 'pending' || i.status === 'sent' || i.status === 'new';
+      }
+
       function numId(id) {
         var m = /(\d+)$/.exec(id || '');
         return m ? parseInt(m[1]) : 0;
@@ -481,11 +485,11 @@
 
       // Insights
       window.openInsights = function() {
-        var outstanding = invoices.filter(function(i){ return i.status === 'pending'; }).reduce(function(s,i){ return s + i.amount; }, 0);
+        var outstanding = invoices.filter(isOpen).reduce(function(s,i){ return s + i.amount; }, 0);
         var overdue = invoices.filter(function(i){ return i.overdue; }).reduce(function(s,i){ return s + i.amount; }, 0);
         var paid = invoices.filter(function(i){ return i.status === 'paid'; }).reduce(function(s,i){ return s + i.amount; }, 0);
         var paidCount = invoices.filter(function(i){ return i.status === 'paid'; }).length;
-        var pendingCount = invoices.filter(function(i){ return i.status === 'pending'; }).length;
+        var pendingCount = invoices.filter(isOpen).length;
         var draftCount = invoices.filter(function(i){ return i.status === 'draft'; }).length;
         var rate = (paidCount + pendingCount) === 0 ? 0 : Math.round(paidCount / (paidCount + pendingCount) * 100);
 
@@ -537,7 +541,7 @@
           taxRate: 0, discountRate: 0, note: '',
           symbol: inv.symbol || symbol,
           currency: inv.currency || 'USD',
-          terms: 30, mode: 'invoice', status: 'existing'
+          terms: 30, mode: inv.mode || 'invoice', status: 'existing'
         };
         try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch(e) {}
         window.location.href = 'preview.html';

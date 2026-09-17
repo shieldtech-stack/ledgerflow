@@ -584,6 +584,7 @@
           var invs = getJSON(INV_KEY) || [];
           var newInv = {
             id: draft.id,
+            mode: draft.mode || 'invoice',
             client: draft.clientName,
             email: draft.clientEmail,
             description: li.length > 0 ? li[0].description : 'Invoice',
@@ -601,6 +602,7 @@
             invs.unshift(newInv);
           }
           localStorage.setItem(INV_KEY, JSON.stringify(invs));
+          localStorage.removeItem(DRAFT_KEY);
         } catch(e) {}
       }
 
@@ -617,6 +619,7 @@
         window.location.href = 'mailto:' + encodeURIComponent(email)
           + '?subject=' + encodeURIComponent(subject)
           + '&body=' + encodeURIComponent(body);
+        saveToInvoices('sent', terms);
         showToast('Opening your mail app with a pre-filled email to ' + email);
       };
 
@@ -626,6 +629,7 @@
       }
 
       window.sendWhatsApp = function() {
+        saveToInvoices('sent', terms);
         var client = draft.clientName || 'Client';
         var termsLabel = terms === 0 ? 'Due on Receipt' : 'Net ' + terms;
         var msg = 'Hello ' + client + ',\n\n'
@@ -879,6 +883,7 @@
         var doc = buildPdf();
         if (!doc) return;
         doc.save('LedgerFlow_' + (draft.id || 'invoice').replace(/[^\w\-]+/g, '_') + '.pdf');
+        saveToInvoices('new', terms);
         showToast('PDF downloaded');
       };
 
