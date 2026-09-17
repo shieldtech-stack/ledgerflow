@@ -1,4 +1,4 @@
-var CACHE_NAME = 'ledgerflow-v3';
+var CACHE_NAME = 'ledgerflow-v4';
 
 var STATIC_ASSETS = [
   './',
