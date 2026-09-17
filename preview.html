@@ -572,7 +572,11 @@
         showToast('Invoice ' + draft.id + ' dispatched via email!');
       };
 
-      // WhatsApp
+      // WhatsApp — send the PDF document when the browser supports file sharing
+      function openWaText(msg) {
+        window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+      }
+
       window.sendWhatsApp = function() {
         var client = draft.clientName || 'Client';
         var termsLabel = terms === 0 ? 'Due on Receipt' : 'Net ' + terms;
@@ -581,7 +585,19 @@
           + 'Amount Due: ' + fmt(total) + ' (' + (draft.currency || 'USD') + ')\n'
           + 'Terms: ' + termsLabel + '\n\n'
           + 'Kindly make payment. Thank you!';
-        window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+
+        var doc = buildPdf();
+        if (doc) {
+          var fileName = 'LedgerFlow_' + (draft.id || 'invoice').replace(/[^\w\-]+/g, '_') + '.pdf';
+          var file = new File([doc.output('blob')], fileName, { type: 'application/pdf' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            navigator.share({ files: [file], title: 'Invoice ' + draft.id, text: msg })
+              .then(function() { showToast('Invoice PDF shared'); })
+              .catch(function(e) { if (e && e.name === 'AbortError') { return; } openWaText(msg); });
+            return;
+          }
+        }
+        openWaText(msg);
       };
 
       window.copyShareLink = function() {
@@ -597,8 +613,8 @@
         try { window.print(); } catch(e) { showToast('Print not available on this device'); }
       };
 
-      window.downloadPdf = function() {
-        if (!window.jspdf) { showToast('PDF engine is still loading \u2014 try again'); return; }
+      window.buildPdf = function() {
+        if (!window.jspdf) { showToast('PDF engine is still loading \u2014 try again'); return null; }
         try {
           var doc = new jspdf.jsPDF({ unit: 'mm', format: 'a4' });
           var W = doc.internal.pageSize.getWidth();
@@ -790,11 +806,18 @@
           doc.setTextColor(gray);
           doc.text(footerText, W / 2, H - 10, { align: 'center' });
 
-          doc.save('LedgerFlow_' + (draft.id || 'invoice').replace(/[^\w\-]+/g, '_') + '.pdf');
-          showToast('PDF downloaded');
+          return doc;
         } catch(e) {
           showToast('Could not generate PDF');
+          return null;
         }
+      };
+
+      window.downloadPdf = function() {
+        var doc = buildPdf();
+        if (!doc) return;
+        doc.save('LedgerFlow_' + (draft.id || 'invoice').replace(/[^\w\-]+/g, '_') + '.pdf');
+        showToast('PDF downloaded');
       };
 
       // M-Pesa
