@@ -592,8 +592,18 @@
 
       // Send
       window.sendInvoice = function() {
-        saveToInvoices('paid', 'Paid just now');
-        showToast('Invoice ' + draft.id + ' dispatched via email!');
+        var email = draft.clientEmail || '';
+        if (!email) { showToast('Add the client\u2019s email on the invoice to send'); return; }
+        var subject = 'Invoice ' + draft.id + ' from ' + companyName;
+        var body = 'Dear ' + (draft.clientName || 'Client') + ',\n\n'
+          + 'Your invoice ' + draft.id + ' from ' + companyName + ' is ready.\n'
+          + 'Amount Due: ' + fmt(total) + ' (' + (draft.currency || 'USD') + ')\n'
+          + 'Terms: ' + termsLabel + '\n\n'
+          + 'Kindly make payment via the details on the invoice. Thank you!';
+        window.location.href = 'mailto:' + encodeURIComponent(email)
+          + '?subject=' + encodeURIComponent(subject)
+          + '&body=' + encodeURIComponent(body);
+        showToast('Opening your mail app with a pre-filled email to ' + email);
       };
 
       // WhatsApp — send the PDF document when the browser supports file sharing
