@@ -189,6 +189,20 @@
           </select>
         </div>
         <div class="h-[1px] bg-surface-container"></div>
+        <!-- Invoice Paper Size -->
+        <div class="flex items-center justify-between min-h-[44px]">
+          <div class="flex flex-col pr-space-sm">
+            <span class="font-body-md text-body-md text-on-surface">Invoice Paper Size</span>
+            <span class="font-body-sm text-body-sm text-secondary">Used for PDF &amp; print</span>
+          </div>
+          <select id="paper-size" class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface font-body-md text-body-md font-medium focus:outline-none">
+            <option value="A4">A4</option>
+            <option value="A5">A5</option>
+            <option value="A6">A6</option>
+            <option value="Letter">Letter</option>
+          </select>
+        </div>
+        <div class="h-[1px] bg-surface-container"></div>
         <!-- Standard Tax -->
         <div class="flex items-center justify-between min-h-[44px]">
           <div class="flex flex-col pr-space-sm">
@@ -822,6 +836,10 @@
       });
       document.getElementById('default-tax').addEventListener('change', function() {
         settings.tax = parseFloat(this.value) || 0; saveSettings(); showToast('Default tax updated');
+      });
+      document.getElementById('paper-size').value = settings.pageSize || 'A4';
+      document.getElementById('paper-size').addEventListener('change', function() {
+        settings.pageSize = this.value; saveSettings(); showToast('Paper size updated');
       });
 
       // Auto reminder toggle

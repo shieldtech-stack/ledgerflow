@@ -23,7 +23,18 @@
     @keyframes toastIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .modal-anim { animation: modalIn 0.25s ease-out; }
     @keyframes modalIn { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @media print {
+      @page { margin: 10mm; }
+      html, body { width: auto !important; }
+      body { background: #ffffff !important; }
+      main { max-width: none !important; padding: 0 !important; margin: 0 !important; }
+      #toast, nav, #mpesa-modal, #empty-state, #preview-topbar, #ready-chip, #action-buttons { display: none !important; }
+      #content { display: block !important; }
+      #invoice-paper { width: 100% !important; box-shadow: none !important; border-radius: 0 !important; overflow: visible !important; }
+      .print-adjust, .print-adjust * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    }
   </style>
+  <style id="print-page-style"></style>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
@@ -120,7 +131,7 @@
     <div id="content" class="hidden flex flex-col">
 
       <!-- Top Bar -->
-      <div class="flex items-center justify-between py-space-xs">
+      <div id="preview-topbar" class="flex items-center justify-between py-space-xs">
         <div class="flex items-center gap-space-xs">
           <a href="create.html" class="w-10 h-10 flex items-center justify-center rounded-xl bg-surface-container text-on-surface hover:bg-surface-container-high transition-transform active:scale-95">
             <span class="material-symbols-outlined text-[20px]">arrow_back</span>
@@ -140,7 +151,7 @@
       </div>
 
       <!-- Ready Chip -->
-      <div class="flex items-center justify-between px-space-md py-space-sm rounded-xl bg-primary/10 text-primary">
+      <div id="ready-chip" class="flex items-center justify-between px-space-md py-space-sm rounded-xl bg-primary/10 text-primary">
         <div class="flex items-center gap-space-xs">
           <span class="relative flex h-2.5 w-2.5">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
@@ -152,7 +163,7 @@
       </div>
 
       <!-- Invoice Paper Card -->
-      <div class="relative w-full rounded-xl bg-surface-container-lowest shadow-xl overflow-hidden">
+      <div id="invoice-paper" class="relative w-full print-adjust rounded-xl bg-surface-container-lowest shadow-xl overflow-hidden">
         <!-- Accent bar: colored from settings accent -->
         <div id="accent-bar" class="h-2 w-full bg-primary-container"></div>
         <div class="p-space-lg flex flex-col gap-space-lg">
@@ -245,6 +256,11 @@
             </div>
           </div>
 
+          <!-- Payment Terms Line -->
+          <div class="text-center pb-space-xs">
+            <p class="font-body-sm text-body-sm text-on-surface-variant font-semibold" id="preview-terms-line"></p>
+          </div>
+
           <!-- Payment Methods (only show if configured in profile) -->
           <div id="payment-section" class="flex flex-col gap-space-sm hidden">
             <!-- Wire / ACH -->
@@ -282,7 +298,7 @@
       </div>
 
       <!-- Action Buttons -->
-      <div class="flex flex-col gap-space-xs pt-space-xs pb-space-sm">
+      <div id="action-buttons" class="flex flex-col gap-space-xs pt-space-xs pb-space-sm">
         <button onclick="sendInvoice()" class="w-full h-12 rounded-xl bg-primary text-on-primary font-headline-sm text-headline-sm flex items-center justify-center gap-space-xs shadow-lg shadow-primary/20 hover:bg-primary-container active:scale-[0.98] transition-all" type="button">
           <span class="material-symbols-outlined text-[22px]">send</span>
           <span>Send to Client</span>
@@ -397,6 +413,7 @@
       var SETTINGS_KEY = 'ledgerflow_settings';
       var DRAFT_KEY  = 'ledgerflow_draft_v2';
       var LOGO_KEY   = 'ledgerflow_logo';
+      var AVATAR_KEY = 'ledgerflow_avatar';
       var PROFILE_KEY = 'ledgerflow_profile';
       var MPESA_KEY  = 'ledgerflow_mpesa';
 
@@ -418,6 +435,10 @@
       var settings = getJSON(SETTINGS_KEY) || {};
       var profile  = getJSON(PROFILE_KEY) || {};
       var mpesa    = getJSON(MPESA_KEY) || {};
+
+      // Report to print: honour the chosen paper size
+      var psEl = document.getElementById('print-page-style');
+      if (psEl) psEl.textContent = '@page { size: ' + (settings.pageSize || 'A4').toLowerCase() + '; }';
 
       // Empty state
       if (!draft || !draft.lineItems || draft.lineItems.length === 0) {
@@ -454,7 +475,7 @@
       initialsEl.textContent = companyName.split(/\s+/).slice(0, 2).map(function(w){ return w[0]; }).join('').toUpperCase();
 
       // Logo override from settings
-      var logoData = localStorage.getItem(LOGO_KEY);
+      var logoData = localStorage.getItem(LOGO_KEY) || localStorage.getItem(AVATAR_KEY);
       if (logoData) {
         var logoBox = document.getElementById('preview-logo-box');
         logoBox.innerHTML = '<img src="' + logoData + '" class="w-full h-full object-cover"/>';
@@ -484,7 +505,10 @@
       document.getElementById('preview-issue-date').textContent = fmtDate(draft.issueDate);
 
       var terms = parseInt(draft.terms) || 30;
-      document.getElementById('preview-terms').textContent = terms === 0 ? 'Due on Receipt' : 'Net ' + terms;
+      var termsLabel = terms === 0 ? 'Due on Receipt' : 'Net ' + terms;
+      var termsLine = terms === 0 ? 'All accounts are due on demand' : 'Payment due within ' + terms + ' days of issue';
+      document.getElementById('preview-terms').textContent = termsLabel;
+      document.getElementById('preview-terms-line').textContent = termsLine;
 
       // Line items
       var li = draft.lineItems || [];
@@ -616,7 +640,7 @@
       window.buildPdf = function() {
         if (!window.jspdf) { showToast('PDF engine is still loading \u2014 try again'); return null; }
         try {
-          var doc = new jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+          var doc = new jspdf.jsPDF({ unit: 'mm', format: (settings.pageSize || 'A4').toLowerCase() });
           var W = doc.internal.pageSize.getWidth();
           var H = doc.internal.pageSize.getHeight();
           var margin = 14;
@@ -633,15 +657,23 @@
 
           var bizName = companyName;
           var taglineText = tagline || '';
+          var nameX = margin;
+          var brandImg = localStorage.getItem(LOGO_KEY) || localStorage.getItem(AVATAR_KEY) || '';
+          if (brandImg && /^data:image\/(png|jpe?g)/i.test(brandImg)) {
+            try {
+              doc.addImage(brandImg, /^data:image\/png/i.test(brandImg) ? 'PNG' : 'JPEG', margin, 8.5, 12, 12);
+              nameX = margin + 16;
+            } catch(e) {}
+          }
           doc.setTextColor(dark);
           doc.setFont('helvetica', 'bold');
           doc.setFontSize(15);
-          doc.text(bizName, margin, 18);
+          doc.text(bizName, nameX, 18);
           if (taglineText) {
             doc.setFontSize(7.5);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(accent);
-            doc.text(taglineText.toUpperCase(), margin, 23);
+            doc.text(taglineText.toUpperCase(), nameX, 23);
           }
 
           doc.setFont('helvetica', 'bold');
@@ -774,6 +806,12 @@
           doc.setFontSize(12);
           doc.text(fmt(total), W - margin - 6, y + 6, { align: 'right' });
           y += 18;
+
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(7.5);
+          doc.setTextColor(gray);
+          doc.text(termsLine.toUpperCase(), W / 2, y, { align: 'center' });
+          y += 7;
 
           if (draft.note) {
             doc.setFont('helvetica', 'bold');
