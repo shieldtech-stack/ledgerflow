@@ -192,7 +192,7 @@
           </div>
         </div>
         <div class="flex flex-col space-y-1">
-          <span class="font-label-caps text-label-caps text-on-surface-variant">Payment Terms</span>
+          <span class="font-label-caps text-label-caps text-on-surface-variant" id="payment-terms-label">Payment Terms</span>
           <div class="flex items-center bg-surface-container-low rounded-lg px-space-sm h-11">
             <select id="payment-terms" class="bg-transparent text-on-surface font-body-sm text-body-sm font-medium focus:outline-none w-full">
               <option value="0">Due on Receipt</option>
@@ -391,6 +391,9 @@
         }
         var action = DOC_TYPES[m].label === 'Receipt' ? 'Generate Receipt' : 'Review &amp; Preview';
         reviewBtn.innerHTML = '<span>' + action + '</span><span class="material-symbols-outlined text-[20px]">arrow_forward</span>';
+        var tLabel = document.getElementById('payment-terms-label');
+        if (tLabel) tLabel.textContent = DOC_TYPES[m].key === 'quote' ? 'Valid For' : 'Payment Terms';
+        updateNoteHint();
       }
       Object.keys(DOC_TYPES).forEach(function(k) {
         document.getElementById('mode-' + k).addEventListener('click', function(){ setMode(k); });
@@ -554,7 +557,10 @@
       // Note hint
       function updateNoteHint() {
         var terms = parseInt(document.getElementById('payment-terms').value) || 0;
-        document.getElementById('note-terms-hint').textContent = terms === 0 ? 'Due on receipt' : 'Net ' + terms + ' days';
+        var isQuote = DOC_TYPES[mode] && DOC_TYPES[mode].key === 'quote';
+        document.getElementById('note-terms-hint').textContent = isQuote
+          ? (terms === 0 ? 'Valid on request' : 'Valid ' + terms + ' days')
+          : (terms === 0 ? 'Due on receipt' : 'Net ' + terms + ' days');
       }
       document.getElementById('payment-terms').addEventListener('change', updateNoteHint);
       updateNoteHint();
@@ -672,10 +678,43 @@
         openClients();
       };
 
+      // Restore the in-progress draft when returning to Create
+      function restoreDraft() {
+        var saved = getJSON(DRAFT_KEY);
+        if (!saved) return;
+        if (saved.mode && DOC_TYPES[saved.mode]) setMode(saved.mode);
+        if (saved.id) {
+          numInput.value = saved.id;
+          document.getElementById('draft-label').textContent = numInput.value.split('-').slice(-1)[0] || 'NEW';
+        }
+        if (saved.clientName) document.getElementById('client-name').value = saved.clientName;
+        if (saved.clientEmail) document.getElementById('client-email').value = saved.clientEmail;
+        if (saved.issueDate) document.getElementById('issue-date').value = saved.issueDate;
+        if (saved.terms !== undefined && saved.terms !== '') document.getElementById('payment-terms').value = String(saved.terms);
+        if (saved.taxRate !== undefined && saved.taxRate !== null) document.getElementById('tax-rate').value = saved.taxRate;
+        if (saved.discountRate !== undefined && saved.discountRate !== null) document.getElementById('discount-rate').value = saved.discountRate;
+        if (saved.note) document.getElementById('client-note').value = saved.note;
+        if (saved.currency) {
+          var sel = document.getElementById('currency-select');
+          if (sel.value !== saved.currency) { sel.value = saved.currency; updateSymbol(); }
+        }
+        if (saved.lineItems && saved.lineItems.length) {
+          lineItems = saved.lineItems.map(function(i) {
+            return { description: i.description || '', detail: i.detail || '', qty: i.qty || 0, unit: i.unit || 'service', rate: i.rate || 0 };
+          });
+          renderLineItems();
+        }
+        var cName = saved.clientName || '';
+        var avatar = document.getElementById('client-avatar');
+        if (avatar) avatar.textContent = cName ? cName.split(/\s+/).slice(0, 2).map(function(w){ return w[0]; }).join('').toUpperCase() : '?';
+        updateNoteHint();
+      }
+
       // Init
       renderCurrencySelect();
       renderLineItems();
       setMode('invoice');
+      restoreDraft();
     })();
   </script>
 
